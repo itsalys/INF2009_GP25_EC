@@ -1,14 +1,21 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, redirect, request, jsonify, render_template, url_for, send_file
 from Controllers.employee_controller import (
     get_all_employees,
     get_employee_by_id,
     add_employee,
     update_employee,
-    delete_employee
+    delete_employee,
+    update_employee_profile_picture
 )
-from Utils.auth import verify_token  
+import base64
+from Utils.auth import verify_token
+from Models.employee import Employee
 
 employees_bp = Blueprint("employees", __name__)
+
+@employees_bp.route("/list", methods=["GET"])
+def employee_list_page():
+    return render_template("employee_list.html", role="admin")
 
 # Admin: Get all employees
 @employees_bp.route("/", methods=["GET"])
@@ -20,20 +27,62 @@ def get_employees():
     employees = get_all_employees()
     return jsonify(employees)
 
+@employees_bp.route("/<int:employee_id>/profile_pic", methods=["GET"])
+def get_profile_picture(employee_id):
+    employee = Employee.query.get(employee_id)
+    if not employee or not employee.profile_pic:
+        return jsonify({"error": "No profile picture available"}), 404
+
+    image_data = base64.b64encode(employee.profile_pic).decode("utf-8")
+    return jsonify({"profile_pic": image_data})
+
+
+# Route for updating profile picture
+@employees_bp.route("/<int:employee_id>/profile_pic", methods=["POST"])
+def update_profile_picture(employee_id):
+    admin, error = verify_token("admin")  
+    if error:
+        return error  # Return authentication error
+
+    if "profile_pic" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files["profile_pic"]
+    message, error = update_employee_profile_picture(employee_id, file)
+
+    if error:
+        return jsonify({"error": error}), 404
+
+    return jsonify({"message": message})
+
+@employees_bp.route("/<int:employee_id>/profile", methods=["GET"])
+def employee_profile_page(employee_id):
+    
+    employee = Employee.query.get(employee_id)
+    if not employee:
+        return jsonify({"error": "Employee not found"}), 404
+    
+    return render_template("employee_profile.html", employee=employee, role="admin")
+
 # Employee/Admin: Get employee by ID
 @employees_bp.route("/<int:employee_id>", methods=["GET"])
 def get_employee(employee_id):
-    user, error = verify_token("admin")  
-    if error:
-        user, error = verify_token("employee")  
-        if error or user.employee_id != employee_id:
-            return jsonify({"error": "Unauthorized access"}), 403
+    # user, error = verify_token("admin")  
+    # if error:
+    #     user, error = verify_token("employee")  
+    #     if error or user.employee_id != employee_id:
+    #         return jsonify({"error": "Unauthorized access"}), 403
 
     employee, error = get_employee_by_id(employee_id)
     if error:
         return jsonify({"error": error}), 404
 
     return jsonify(employee)
+
+# Serve the Add Employee page
+@employees_bp.route("/add", methods=["GET"])
+def add_employee_page():
+    return render_template("add_employee.html", role="admin")
 
 # Admin: Add a new employee
 @employees_bp.route("/", methods=["POST"])
@@ -42,8 +91,26 @@ def create_employee():
     if error:
         return error
 
-    data = request.get_json()
-    message, error = add_employee(data)
+    full_name = request.form.get("full_name")
+    department = request.form.get("department")
+    email = request.form.get("email")
+    password = request.form.get("password")
+    profile_pic = request.files.get("profile_pic")
+
+    if not all([full_name, department, email, password]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    profile_pic_data = profile_pic.read() if profile_pic else None
+
+    data = {
+        "full_name": full_name,
+        "department": department,
+        "email": email,
+        "password": password,
+        "profile_pic": profile_pic_data
+    }
+
+    message, error = add_employee(data)  # Call the controller function
 
     if error:
         return jsonify({"error": error}), 400

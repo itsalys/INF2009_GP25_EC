@@ -25,28 +25,35 @@ def generate_jwt(user_id, role):
 
 # Function to verify JWT token and return user
 def verify_token(required_role):
-    """Verifies JWT token and checks if the user has the correct role."""
+    print("📌 Received Headers:", request.headers)  # ✅ Debugging
+
     token = request.headers.get("Authorization")
+    print("📌 Received Authorization Header:", token)  # ✅ Debugging
+
     if not token:
-        return None, jsonify({"error": "Unauthorized. Missing token"}), 401
+        print("❌ No Authorization header received!")
+        return None, {"error": "Unauthorized. Missing token"}
 
     try:
-        token = token.split(" ")[1]  # Remove "Bearer " prefix
+        if token.startswith("Bearer "):
+            token = token.split(" ")[1]
+
+        print("📌 Extracted Token:", token)  # ✅ Debug log
+
         decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        
+        print("✅ Decoded Token:", decoded)  # ✅ Debug log
+
         if decoded["role"] != required_role:
-            return None, jsonify({"error": f"Unauthorized. {required_role} access required"}), 403
+            print(f"❌ Unauthorized. {required_role} access required.")
+            return None, {"error": f"Unauthorized. {required_role} access required"}, 403
 
-        if required_role == "admin":
-            user = Admin.query.get(decoded["id"])
-        else:
-            user = Employee.query.get(decoded["id"])
-
-        if not user:
-            return None, jsonify({"error": "Invalid token"}), 403
-        return user, None
+        return Admin.query.get(decoded["id"]) if required_role == "admin" else Employee.query.get(decoded["id"]), None
 
     except jwt.ExpiredSignatureError:
-        return None, jsonify({"error": "Token has expired"}), 401
-    except jwt.InvalidTokenError:
-        return None, jsonify({"error": "Invalid token"}), 403
+        print("❌ Token Expired")
+        return None, {"error": "Token has expired"}
+
+    except jwt.InvalidTokenError as e:
+        print(f"❌ Invalid Token Error: {e}")
+        return None, {"error": "Invalid token"}
+

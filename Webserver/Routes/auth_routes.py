@@ -1,25 +1,32 @@
 from flask import jsonify, Blueprint, request, render_template, redirect, url_for, session
 from Controllers.auth_controller import authenticate_admin, authenticate_employee
+from Utils.auth import verify_token
+
 
 auth_bp = Blueprint("auth", __name__)
 
 # Admin Login Route
 @auth_bp.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
-    if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
-        
-        token, error = authenticate_admin(email, password)
-        if error:
-            return render_template("admin_login.html", error=error)
+    if request.method == "GET":
+        return render_template("admin_login.html")  # ✅ Now supports GET requests
 
-        # Store token & role in session
-        session["token"] = token
-        session["role"] = "admin"
-        return redirect(url_for("admin_dashboard"))
+    data = request.get_json()  # ✅ Handle JSON POST request
 
-    return render_template("admin_login.html")
+    if not data or "email" not in data or "password" not in data:
+        return jsonify({"error": "Missing email or password"}), 400
+
+    token, error = authenticate_admin(data["email"], data["password"])
+    if error:
+        return jsonify({"error": error}), 401
+
+    # Store token in session (optional)
+    session["token"] = token
+    session["role"] = "admin"
+    print("✅ Login Successful. Token:", token)
+
+    return jsonify({"token": f"Bearer {token}"})  # ✅ JSON response for authentication
+
 
 # Employee login
 @auth_bp.route("/employee/login", methods=["POST"])
@@ -31,3 +38,23 @@ def employee_login():
         return jsonify({"error": error}), 401
 
     return jsonify({"token": f"Bearer {token}"})
+
+# Admin Dashboard
+@auth_bp.route("/admin/dashboard", methods=["GET"])
+def admin_dashboard():
+    return render_template("admin_dashboard.html", role="admin")
+
+# Verify Admin
+@auth_bp.route("/admin/verify", methods=["GET"])
+def verify_admin():
+    admin, error = verify_token("admin")
+
+    if error:
+        print(f"❌ Authentication failed: {error}")  # ✅ Debugging
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if not admin:
+        print("❌ Admin not found in database!")
+        return jsonify({"error": "Admin not found"}), 404
+
+    return jsonify({"message": "Token valid", "admin": admin.admin_id})  # ✅ Use `admin.admin_id`

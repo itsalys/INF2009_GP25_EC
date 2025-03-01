@@ -1,4 +1,3 @@
-<!-- templates/admin_dashboard.html -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -9,19 +8,87 @@
         <thead>
             <tr>
                 <th>Employee ID</th>
-                <th>Full Name</th>
                 <th>Timestamp</th>
+                <th>Clocked In</th>
             </tr>
         </thead>
-        <tbody>
-            {% for record in attendance_records %}
-            <tr>
-                <td>{{ record.employee_id }}</td>
-                <td>{{ record.full_name }}</td>
-                <td>{{ record.timestamp }}</td>
-            </tr>
-            {% endfor %}
+        <tbody id="attendance-table">
+            <!-- Data will be inserted here dynamically -->
         </tbody>
     </table>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("✅ JavaScript Loaded");
+
+    let token = localStorage.getItem("token");
+
+    if (!token) {
+        console.error("❌ No token found. Redirecting to login...");
+        window.location.href = "/auth/admin/login";  
+        return;
+    }
+
+    token = token.startsWith("Bearer ") ? token : `Bearer ${token}`;  // ✅ Ensure correct format
+    console.log("✅ Sending Token:", token);
+
+    // ✅ Verify token first
+    fetch("/auth/admin/verify", {
+        method: "GET",
+        headers: {
+            "Authorization": token,
+            "Content-Type": "application/json"
+        },
+        mode: "cors",
+        credentials: "include"
+    })
+    .then(response => {
+        if (response.status === 401) {
+            console.error("❌ Unauthorized! Redirecting to login...");
+            window.location.href = "/auth/admin/login";
+            return;
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log("✅ Token Verified:", data);
+        fetchAttendance();  // ✅ Call function to fetch attendance after verification
+    })
+    .catch(error => console.error("❌ Fetch Error:", error));
+
+    function fetchAttendance() {
+        fetch("/attendance/", {
+            method: "GET",
+            headers: {
+                "Authorization": token,
+                "Content-Type": "application/json"
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("✅ Attendance Data:", data);
+
+            if (data.error) {
+                console.error("❌ Error fetching attendance:", data.error);
+                return;
+            }
+
+            let tableBody = document.getElementById("attendance-table");
+            tableBody.innerHTML = ""; // Clear table
+
+            data.forEach(record => {
+                let row = `<tr>
+                    <td>${record.employee_id}</td>
+                    <td>${record.timestamp}</td>
+                    <td>${record.clocked_in ? "✅ Yes" : "❌ No"}</td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
+        })
+        .catch(error => console.error("❌ Failed to fetch attendance:", error));
+    }
+});
+</script>
+    
 {% endblock %}
