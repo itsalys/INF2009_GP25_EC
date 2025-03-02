@@ -75,27 +75,6 @@ def get_my_attendance():
         for rec in records
     ])
     
-# Admin: Get attendance records for a specific employee (Requires admin JWT)
-@attendance_bp.route("/<int:employee_id>", methods=["GET"])
-def get_employee_attendance(employee_id):
-    admin, error = verify_token("admin")
-    if error:
-        return error  # Return error if authentication fails
-
-    records = Attendance.query.filter_by(employee_id=employee_id).all()
-
-    if not records:
-        return jsonify({"error": "No attendance records found for this employee"}), 404
-
-    return jsonify([
-        {
-            "id": rec.attendance_id,
-            "timestamp": rec.timestamp.isoformat(),  # Convert to ISO format
-            "clocked_in": rec.clocked_in
-        }
-        for rec in records
-    ])
-
 # Admin: Update an employee's clock-in status and timestamp
 @attendance_bp.route("/<int:attendance_id>", methods=["PUT"])
 def update_attendance(attendance_id):
