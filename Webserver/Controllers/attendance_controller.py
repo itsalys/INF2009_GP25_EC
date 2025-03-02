@@ -1,77 +1,116 @@
-from flask import Blueprint, request, jsonify
-from Controllers.attendance_controller import (
-    get_all_attendance,
-    get_employee_attendance,
-    add_attendance,
-    update_attendance
-)
-from Utils.auth import verify_token 
+import pytz
+from Models.attendance import Attendance
+from Models.employee import Employee
+from Models import db
+from datetime import datetime, timezone, date
 
-attendance_bp = Blueprint("attendance", __name__)
+LOCAL_TZ = pytz.timezone("Asia/Singapore")  # Change this to your timezone
 
-# Admin: Get all attendance records
-@attendance_bp.route("/", methods=["GET"])
-def fetch_attendance():
-    admin, error = verify_token("admin")
-    if error:
-        return error
+def get_all_attendance():
+    """Retrieve all attendance records."""
+    records = (
+        db.session.query(
+            Attendance.attendance_id,
+            Attendance.employee_id,
+            Attendance.timestamp,
+            Attendance.clocked_in,
+            Employee.full_name  # Join Employee Name
+        )
+        .join(Employee, Employee.employee_id == Attendance.employee_id)
+        .order_by(Attendance.timestamp.desc())
+        .all()
+    )
+    
+    return [
+        {
+            "id": rec.attendance_id,
+            "employee_id": rec.employee_id,
+            "name": rec.full_name,
+            "timestamp": rec.timestamp.isoformat(),
+            "clocked_in": rec.clocked_in
+        }
+        for rec in records
+    ]
 
-    records = get_all_attendance()
-    return jsonify(records)
+def get_employee_attendance(employee_id):
+    """Retrieve attendance records for a specific employee."""
+    records = (
+        db.session.query(
+            Attendance.attendance_id,
+            Attendance.employee_id,
+            Attendance.timestamp,
+            Attendance.clocked_in,
+            Employee.full_name
+        )
+        .join(Employee, Employee.employee_id == Attendance.employee_id)
+        .filter(Attendance.employee_id == employee_id)
+        .order_by(Attendance.timestamp.desc())  # Sort by timestamp DESC
+        .all()
+    )
+    if not records:
+        return None, "No attendance records found"
 
-# Employee: Get their own attendance records
-@attendance_bp.route("/me", methods=["GET"])
-def fetch_my_attendance():
-    employee, error = verify_token("employee")
-    if error:
-        return error
+    return [
+        {
+            "id": rec.attendance_id,
+            "employee_id": rec.employee_id,
+            "name": rec.full_name,
+            "timestamp": rec.timestamp.isoformat(),
+            "clocked_in": rec.clocked_in
+        }
+        for rec in records
+    ], None
 
-    records, error = get_employee_attendance(employee.employee_id)
-    if error:
-        return jsonify({"error": error}), 404
+def add_attendance_record(data):
+    """Add a new attendance record for an employee (Clock In / Clock Out)."""
+    if "employee_id" not in data or "clocked_in" not in data:
+        return None, "Missing required fields: employee_id, clocked_in"
 
-    return jsonify(records)
+    employee = Employee.query.get(data["employee_id"])
+    if not employee:
+        return None, "Employee not found"
 
-# Admin: Get attendance for a specific employee
-@attendance_bp.route("/<int:employee_id>", methods=["GET"])
-def fetch_employee_attendance(employee_id):
-    admin, error = verify_token("admin") 
-    if error:
-        return error
+    clocked_in = bool(data["clocked_in"])
+    today = datetime.now(LOCAL_TZ).date()
 
-    records, error = get_employee_attendance(employee_id)
-    if error:
-        return jsonify({"error": error}), 404
+    # Ensure timestamp is properly formatted
+    timestamp = data.get("timestamp")
+    if timestamp:
+        try:
+            timestamp = datetime.fromisoformat(timestamp)  # Convert from string
+            timestamp = LOCAL_TZ.localize(timestamp) if timestamp.tzinfo is None else timestamp.astimezone(LOCAL_TZ)
 
-    return jsonify(records)
+        except ValueError:
+            return None, "Invalid timestamp format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS)"
+    else:
+        timestamp = datetime.now(LOCAL_TZ)  
 
-# Employee: Add attendance record (clock-in or clock-out)
-@attendance_bp.route("/", methods=["POST"])
-def record_attendance():
-    employee, error = verify_token("employee") 
-    if error:
-        return error
+    # Create a new attendance entry
+    new_record = Attendance(
+        employee_id=data["employee_id"],
+        clocked_in=clocked_in,
+        timestamp=timestamp
+    )
+    db.session.add(new_record)
+    db.session.commit()
 
-    data = request.get_json()
-    data["employee_id"] = employee.employee_id  # Ensure correct ID
-    message, error = add_attendance(data)
+    return f"{'Clock-in' if clocked_in else 'Clock-out'} recorded successfully", None
 
-    if error:
-        return jsonify({"error": error}), 400
 
-    return jsonify({"message": message}), 201
+def update_attendance_record(attendance_id, data):
+    """Update an existing attendance record."""
+    record = Attendance.query.get(attendance_id)
+    if not record:
+        return None, "Attendance record not found"
 
-# Admin: Update attendance records (e.g., fix incorrect clock-in time)
-@attendance_bp.route("/<int:attendance_id>", methods=["PUT"])
-def modify_attendance(attendance_id):
-    admin, error = verify_token("admin") 
-    if error:
-        return error
+    if "clocked_in" in data:
+        record.clocked_in = bool(data["clocked_in"])
 
-    data = request.get_json()
-    message, error = update_attendance(attendance_id, data)
+    if "timestamp" in data:
+        try:
+            record.timestamp = datetime.fromisoformat(data["timestamp"])
+        except ValueError:
+            return None, "Invalid timestamp format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS)"
 
-    if error:
-        return jsonify({"error": error}), 404
-
-    return jsonify({"message": message})
+    db.session.commit()
+    return "Attendance record updated successfully", None

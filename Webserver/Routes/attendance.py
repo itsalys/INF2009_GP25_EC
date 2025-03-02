@@ -1,50 +1,59 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template
 from Models.attendance import Attendance
 from Models.employee import Employee
 from Models import db
 from Utils.auth import verify_token
+from Controllers.attendance_controller import (
+    get_all_attendance,
+    get_employee_attendance,
+    update_attendance_record,
+    add_attendance_record
+)
 
 attendance_bp = Blueprint("attendance", __name__)
 
+@attendance_bp.route("/list", methods=["GET"])
+def attendance_list_page():
+    """Serve the Attendance List page"""
+    return render_template("attendance_list.html", role="admin")
+
 # Get all attendance records
 @attendance_bp.route("/", methods=["GET"])
-def get_attendance():
+def fetch_attendance():
+    """Admin: Get all attendance records"""
     admin, error = verify_token("admin")
     if error:
-        return error  # Return error if authentication fails
+        return error
 
-    records = Attendance.query.all()
-    return jsonify([
-        {
-            "id": rec.attendance_id,
-            "employee_id": rec.employee_id,
-            "timestamp": rec.timestamp.isoformat(),
-            "clocked_in": rec.clocked_in
-        }
-        for rec in records
-    ])
+    records = get_all_attendance()
+    return jsonify(records)
+
+@attendance_bp.route("/<int:employee_id>", methods=["GET"])
+def fetch_employee_attendance(employee_id):
+    """Admin: Get an employee's attendance records"""
+    admin, error = verify_token("admin")
+    if error:
+        return error
+
+    response = get_employee_attendance(employee_id)
+    return response
     
 # Add an attendance record
 @attendance_bp.route("/", methods=["POST"])
 def add_attendance():
+    """Route for adding an attendance record (Clock In / Clock Out)"""
+    admin, error = verify_token("admin")  # ✅ Ensure admin authentication
+    if error:
+        return error
+
     data = request.get_json()
+    message, error = add_attendance_record(data)
 
-    # Validate request data
-    if "employee_id" not in data or "clocked_in" not in data:
-        return jsonify({"error": "Missing required fields: employee_id, clocked_in"}), 400
+    if error:
+        return jsonify({"error": error}), 400
 
-    # Check if employee exists
-    employee = Employee.query.get(data["employee_id"])
-    if not employee:
-        return jsonify({"error": "Employee not found"}), 404
+    return jsonify({"message": message}), 201
 
-    new_record = Attendance(
-        employee_id=data["employee_id"],
-        clocked_in=data["clocked_in"]
-    )
-    db.session.add(new_record)
-    db.session.commit()
-    return jsonify({"message": "Attendance recorded"}), 201
 
 # Employee: Get their own attendance records (Requires JWT)
 @attendance_bp.route("/me", methods=["GET"])
@@ -90,26 +99,15 @@ def get_employee_attendance(employee_id):
 # Admin: Update an employee's clock-in status and timestamp
 @attendance_bp.route("/<int:attendance_id>", methods=["PUT"])
 def update_attendance(attendance_id):
+    """Admin: Update an existing attendance record"""
     admin, error = verify_token("admin")
     if error:
-        return error  # Return error if authentication fails
+        return error
 
     data = request.get_json()
-    
-    record = Attendance.query.get(attendance_id)
-    if not record:
-        return jsonify({"error": "Attendance record not found"}), 404
+    message, error = update_attendance_record(attendance_id, data)
 
-    # Validate and update fields
-    if "clocked_in" in data:
-        record.clocked_in = data["clocked_in"]
+    if error:
+        return jsonify({"error": error}), 404
 
-    if "timestamp" in data:
-        try:
-            from datetime import datetime
-            record.timestamp = datetime.fromisoformat(data["timestamp"])
-        except ValueError:
-            return jsonify({"error": "Invalid timestamp format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS)"}), 400
-
-    db.session.commit()
-    return jsonify({"message": "Attendance record updated successfully"})
+    return jsonify({"message": message})

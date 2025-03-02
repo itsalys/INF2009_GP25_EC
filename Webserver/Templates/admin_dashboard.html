@@ -33,30 +33,6 @@ document.addEventListener("DOMContentLoaded", function () {
     token = token.startsWith("Bearer ") ? token : `Bearer ${token}`;  // ✅ Ensure correct format
     console.log("✅ Sending Token:", token);
 
-    // ✅ Verify token first
-    fetch("/auth/admin/verify", {
-        method: "GET",
-        headers: {
-            "Authorization": token,
-            "Content-Type": "application/json"
-        },
-        mode: "cors",
-        credentials: "include"
-    })
-    .then(response => {
-        if (response.status === 401) {
-            console.error("❌ Unauthorized! Redirecting to login...");
-            window.location.href = "/auth/admin/login";
-            return;
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log("✅ Token Verified:", data);
-        fetchAttendance();  // ✅ Call function to fetch attendance after verification
-    })
-    .catch(error => console.error("❌ Fetch Error:", error));
-
     function fetchAttendance() {
         fetch("/attendance/", {
             method: "GET",

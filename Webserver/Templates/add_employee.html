@@ -44,6 +44,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!token) {
         console.error("❌ No token found. Redirecting to login...");
+        submitButton.disabled = true;
         window.location.href = "/auth/admin/login";  
         return;
     }
@@ -65,6 +66,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .then(data => {
         if (data.error) {
             console.error("❌ Unauthorized! Redirecting to login...");
+            submitButton.disabled = true;
             window.location.href = "/auth/admin/login";
             return;
         }
@@ -72,6 +74,7 @@ document.addEventListener("DOMContentLoaded", function () {
     })
     .catch(error => {
         console.error("❌ Fetch Error:", error);
+        submitButton.disabled = true;
         window.location.href = "/auth/admin/login";  
     });
 

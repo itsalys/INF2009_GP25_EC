@@ -81,7 +81,7 @@ def get_employee(employee_id):
 
 # Serve the Add Employee page
 @employees_bp.route("/add", methods=["GET"])
-def add_employee_page():
+def add_employee_page():   
     return render_template("add_employee.html", role="admin")
 
 # Admin: Add a new employee
@@ -89,8 +89,8 @@ def add_employee_page():
 def create_employee():
     admin, error = verify_token("admin")  
     if error:
-        return error
-
+        return jsonify({"error": "Unauthorized. Admin access required"}), 403
+    
     full_name = request.form.get("full_name")
     department = request.form.get("department")
     email = request.form.get("email")

@@ -29,16 +29,38 @@ document.getElementById("loginForm").addEventListener("submit", function(event) 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
-        mode: "cors",  // ✅ Required for cross-origin requests
-        credentials: "include"  // ✅ Ensure cookies & headers are passed
+        mode: "cors",
+        credentials: "include"
     })
     .then(response => response.json().then(data => ({ status: response.status, body: data }))) 
     .then(({ status, body }) => {
         if (status === 200 && body.token) {
-            localStorage.setItem("token", body.token);  // ✅ Store JWT in localStorage
-            window.location.href = "/auth/admin/dashboard";
+            localStorage.setItem("token", body.token);  // ✅ Store JWT with "Bearer"
+            console.log("✅ Stored Token:", localStorage.getItem("token")); // ✅ Debugging
+
+            // ✅ Verify token before redirecting
+            return fetch("/auth/admin/verify", {
+                method: "GET",
+                headers: {
+                    "Authorization": localStorage.getItem("token"),
+                    "Content-Type": "application/json"
+                },
+                mode: "cors",
+                credentials: "include"
+            });
         } else {
-            showError(body.error || "An unknown error occurred.");
+            throw new Error(body.error || "An unknown error occurred.");
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error("❌ Token Invalid! Redirecting to login...");
+            localStorage.removeItem("token");
+            window.location.href = "/auth/admin/login";
+        } else {
+            console.log("✅ Token Verified:", data);
+            window.location.href = "/auth/admin/dashboard";
         }
     })
     .catch(error => {
@@ -51,6 +73,7 @@ document.getElementById("loginForm").addEventListener("submit", function(event) 
         document.getElementById("errorMessage").style.display = "block";
     }
 });
+
 </script>
 
 {% endblock %}
