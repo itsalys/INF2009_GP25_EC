@@ -39,11 +39,6 @@ def employee_login():
 
     return jsonify({"token": f"Bearer {token}"})
 
-# Admin Dashboard
-@auth_bp.route("/admin/dashboard", methods=["GET"])
-def admin_dashboard():
-    return render_template("admin_dashboard.html", role="admin")
-
 # Verify Admin
 @auth_bp.route("/admin/verify", methods=["GET"])
 def verify_admin():
