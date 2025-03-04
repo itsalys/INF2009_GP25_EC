@@ -45,6 +45,17 @@ def init_db(app):
         from Models.attendance import Attendance
         from Models.admin import Admin
         from Models.embedding import Embedding
+        
+        # Check if an admin already exists
+        existing_admin = Admin.query.filter_by(email="admin@gmail.com").first()
+
+        if not existing_admin:
+            new_admin = Admin(
+                email="admin@gmail.com",
+                password="$2b$12$FlH5tOLvYmSCsY/7v1lD1.X4qHIzO82mBi2RSJdcoNG7pgrb8CP9K"  # Pre-hashed password
+            )
+            db.session.add(new_admin)
+            print("Admin user created.")
 
         db.create_all()  # Creates tables if they don't exist
         db.session.commit()  # Ensure changes are committed
