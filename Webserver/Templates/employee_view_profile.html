@@ -128,9 +128,9 @@
 
     function validatePassword(newPassword, confirmPassword, errorElement) {
         // Password validation: 8+ chars, alphanumeric, symbol
-        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
         if (!passwordRegex.test(newPassword)) {
-            errorElement.innerText = "❌ Password must be at least 8 characters, contain a letter, number, and symbol.";
+            errorElement.innerText = "❌ Password must be at least 8 characters, contain Uppercase and Lowercase letters, a number, and a symbol.";
             return false;
         }
 

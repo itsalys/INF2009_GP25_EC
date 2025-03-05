@@ -18,19 +18,24 @@
         <div class="mb-3">
             <label for="email" class="form-label">Email</label>
             <input type="email" class="form-control" id="email" name="email" required>
+            <div class="invalid-feedback">Please enter a valid email address.</div>
         </div>
 
         <div class="mb-3">
             <label for="password" class="form-label">Password</label>
             <input type="password" class="form-control" id="password" name="password" required>
+            <div class="invalid-feedback">
+                Password must be at least 8 characters, contain one uppercase, one lowercase, one number, and one special character.
+            </div>
         </div>
 
         <div class="mb-3">
             <label for="profile_pic" class="form-label">Profile Picture</label>
-            <input type="file" class="form-control" id="profile_pic" name="profile_pic" accept="image/*">
+            <input type="file" class="form-control" id="profile_pic" name="profile_pic" accept=".png, .jpg, .jpeg, .gif" required>
+            <div class="invalid-feedback">Please upload a valid image (PNG, JPG, JPEG, GIF).</div>
         </div>
 
-        <button type="submit" class="btn btn-primary">Add Employee</button>
+        <button type="submit" class="btn btn-primary" id="submitButton" disabled>Add Employee</button>
     </form>
 
     <div id="responseMessage" class="alert mt-3" style="display: none;"></div>
@@ -41,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("✅ JavaScript Loaded");
 
     let token = localStorage.getItem("token");
+    const submitButton = document.getElementById("submitButton");
 
     if (!token) {
         console.error("❌ No token found. Redirecting to login...");
@@ -68,9 +74,10 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error("❌ Unauthorized! Redirecting to login...");
             submitButton.disabled = true;
             window.location.href = "/auth/admin/login";
-            return;
+        } else {
+            console.log("✅ Token Verified:", data);
+            submitButton.disabled = false; // Enable submit button after verification
         }
-        console.log("✅ Token Verified:", data);
     })
     .catch(error => {
         console.error("❌ Fetch Error:", error);
@@ -82,12 +89,74 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("addEmployeeForm").addEventListener("submit", function(event) {
         event.preventDefault();
 
+        // Validate all required fields
+        let fullName = document.getElementById("full_name");
+        let department = document.getElementById("department");
+        let email = document.getElementById("email");
+        let password = document.getElementById("password");
+        let profilePic = document.getElementById("profile_pic");
+
+        let isValid = true;
+
+        if (!fullName.value.trim()) {
+            fullName.classList.add("is-invalid");
+            isValid = false;
+        } else {
+            fullName.classList.remove("is-invalid");
+        }
+
+        if (!department.value.trim()) {
+            department.classList.add("is-invalid");
+            isValid = false;
+        } else {
+            department.classList.remove("is-invalid");
+        }
+
+        // Validate email format
+        let emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(email.value)) {
+            email.classList.add("is-invalid");
+            isValid = false;
+        } else {
+            email.classList.remove("is-invalid");
+        }
+
+        // Validate password format
+        let passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+        if (!passwordPattern.test(password.value)) {
+            password.classList.add("is-invalid");
+            isValid = false;
+        } else {
+            password.classList.remove("is-invalid");
+        }
+
+        // Validate profile picture
+        if (!profilePic.files.length) {
+            profilePic.classList.add("is-invalid");
+            isValid = false;
+        } else {
+            let file = profilePic.files[0];
+            let allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/gif"];
+            if (!allowedTypes.includes(file.type)) {
+                profilePic.classList.add("is-invalid");
+                isValid = false;
+            } else {
+                profilePic.classList.remove("is-invalid");
+            }
+        }
+
+        if (!isValid) {
+            console.error("❌ Form validation failed.");
+            return;
+        }
+
+        // Prepare form data
         const formData = new FormData();
-        formData.append("full_name", document.getElementById("full_name").value);
-        formData.append("department", document.getElementById("department").value);
-        formData.append("email", document.getElementById("email").value);
-        formData.append("password", document.getElementById("password").value);
-        formData.append("profile_pic", document.getElementById("profile_pic").files[0]);
+        formData.append("full_name", fullName.value.trim());
+        formData.append("department", department.value.trim());
+        formData.append("email", email.value.trim());
+        formData.append("password", password.value);
+        formData.append("profile_pic", profilePic.files[0]);
 
         console.log("✅ Sending request to add employee...");
 
@@ -103,6 +172,7 @@ document.addEventListener("DOMContentLoaded", function () {
             console.log("✅ Server Response:", data);
             let responseDiv = document.getElementById("responseMessage");
             responseDiv.style.display = "block";
+            responseDiv.classList.remove("alert-danger", "alert-success");
 
             if (data.error) {
                 responseDiv.classList.add("alert-danger");
