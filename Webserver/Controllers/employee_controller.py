@@ -80,3 +80,23 @@ def delete_employee(employee_id):
     db.session.delete(employee)
     db.session.commit()
     return "Employee deleted successfully", None
+
+def change_employee_password(employee_id, current_password, new_password):
+    """Change employee password after verifying the current password."""
+    employee = Employee.query.get(employee_id)
+    if not employee:
+        return None, "Employee not found"
+
+    # Verify the current password
+    if not bcrypt.checkpw(current_password.encode("utf-8"), employee.password.encode("utf-8")):
+        return None, "Current password is incorrect"
+    
+    if bcrypt.checkpw(new_password.encode("utf-8"), employee.password.encode("utf-8")):
+        return None, "New password cannot be the same as Current Password"
+
+    # Hash and update the new password
+    hashed_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    employee.password = hashed_password
+    db.session.commit()
+
+    return "Password changed successfully", None

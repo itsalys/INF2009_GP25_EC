@@ -5,7 +5,8 @@ from Controllers.employee_controller import (
     add_employee,
     update_employee,
     delete_employee,
-    update_employee_profile_picture
+    update_employee_profile_picture,
+    change_employee_password
 )
 import base64
 from Utils.auth import verify_token
@@ -64,10 +65,10 @@ def employee_profile_page(employee_id):
     
     return render_template("employee_profile.html", employee=employee, role="admin")
 
+# Employee: View Profile Page
 @employees_bp.route("/myprofile", methods=["GET"])
 def employee_view_profile_page():
     return render_template("employee_view_profile.html", role="employee")
-        
 
 # Employee/Admin: Get employee by ID
 @employees_bp.route("/<int:employee_id>", methods=["GET"])
@@ -148,5 +149,28 @@ def remove_employee(employee_id):
 
     if error:
         return jsonify({"error": error}), 404
+
+    return jsonify({"message": message})
+
+# Employee: Change Password
+@employees_bp.route("/<int:employee_id>/change_password", methods=["PUT"])
+def change_password(employee_id):
+    user, error = verify_token("employee")  
+    if error or user.employee_id != employee_id:
+        return jsonify({"error": "Unauthorized access"}), 403
+
+    data = request.get_json()
+    current_password = data.get("current_password")
+    new_password = data.get("new_password")
+
+    # Validate input
+    if not all([current_password, new_password]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    # Call the controller function
+    message, error = change_employee_password(employee_id, current_password, new_password)
+
+    if error:
+        return jsonify({"error": error}), 400
 
     return jsonify({"message": message})

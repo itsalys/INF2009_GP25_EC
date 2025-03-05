@@ -21,7 +21,8 @@
   <hr>
 
   <h2>Change Password</h2>
-  
+  <p id="password-error" class="error"></p>
+
       <form id="changePasswordForm">
         <div class="mb-3">
             <label for="currentPassword" class="form-label">Current Password:</label>
@@ -87,8 +88,61 @@
     })
     .catch(error => console.error("❌ Failed to fetch employee profile:", error));
 
+    document.getElementById("changePasswordForm").addEventListener("submit", function (event) {
+        event.preventDefault();
 
-      
+        const currentPassword = document.getElementById("currentPassword").value;
+        const newPassword = document.getElementById("newPassword").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
+        const errorElement = document.getElementById("password-error");
+
+        // Validate password
+        if (!validatePassword(newPassword, confirmPassword, errorElement)) {
+            return;
+        }
+
+        // Send request to change password
+        fetch(`/employees/${employeeId}/change_password`, {
+            method: "PUT",
+            headers: {
+                "Authorization": token,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                errorElement.innerText = data.error;
+            } else {
+                alert("✅ Password changed successfully!");
+                document.getElementById("changePasswordForm").reset();
+                errorElement.innerText = "";
+            }
+        })
+        .catch(error => {
+            console.error("❌ Error changing password:", error);
+            errorElement.innerText = "An error occurred. Please try again.";
+        });
+    });
+
+    function validatePassword(newPassword, confirmPassword, errorElement) {
+        // Password validation: 8+ chars, alphanumeric, symbol
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(newPassword)) {
+            errorElement.innerText = "❌ Password must be at least 8 characters, contain a letter, number, and symbol.";
+            return false;
+        }
+
+        // Confirm password match
+        if (newPassword !== confirmPassword) {
+            errorElement.innerText = "❌ Passwords do not match.";
+            return false;
+        }
+
+        errorElement.innerText = "";
+        return true;
+    }
 
     });
     </script>
