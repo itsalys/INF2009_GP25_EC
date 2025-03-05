@@ -9,12 +9,13 @@
             <ul class="navbar-nav" id="navMenu">
 
                 {% if role %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('attendance.attendance_list_page') }}">Attendance</a>
-                    </li>
+
 
                     {% if role == 'admin' %}
                     <li class="nav-item dropdown">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('attendance.attendance_list_page') }}">Attendance</a>
+                        </li>
                         <a class="nav-link dropdown-toggle" href="#" id="employeeDropdown" role="button" data-bs-toggle="dropdown">
                             Employee Management
                         </a>
@@ -49,7 +50,13 @@
         function logout() {
             console.log("Logging out...");
             localStorage.removeItem("token");
-            window.location.href = "/auth/admin/login";
+            let role = localStorage.getItem("role"); // Store role in localStorage upon login
+            if (role === "admin") {
+                window.location.href = "/auth/admin/login";  // Redirect to admin login
+            } else {
+                window.location.href = "/auth/employee/login";  // Redirect to employee login
+            }
+
         }
 
         document.getElementById("logoutButton").addEventListener("click", function(event) {

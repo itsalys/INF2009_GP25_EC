@@ -9,6 +9,8 @@ from Controllers.attendance_controller import (
     update_attendance_record,
     add_attendance_record
 )
+from sqlalchemy import func
+from datetime import datetime
 
 attendance_bp = Blueprint("attendance", __name__)
 
@@ -54,26 +56,46 @@ def add_attendance():
 
     return jsonify({"message": message}), 201
 
+# Employee: Dashboard Page
+@attendance_bp.route("/dashboard", methods=["GET"])
+def employee_dashboard_page():
+    return render_template("employee_dashboard.html", role="employee")
 
 # Employee: Get their own attendance records (Requires JWT)
 @attendance_bp.route("/me", methods=["GET"])
 def get_my_attendance():
+    print("📌 Received Authorization Header:", request.headers.get("Authorization"))
     employee, error = verify_token("employee")
     if error:
-        return error  # Return error if authentication fails
+        return jsonify({"error": "Unauthorized"}), 401  # Return JSON error message if authentication fails
 
     records = Attendance.query.filter_by(employee_id=employee.employee_id).all()
-    if not records:
-        return jsonify({"error": "No attendance records found"}), 404
+    
+    today = datetime.now().date()
 
-    return jsonify([
-        {
-            "id": rec.attendance_id,
-            "timestamp": rec.timestamp.isoformat(),
-            "clocked_in": rec.clocked_in
-        }
-        for rec in records
-    ])
+    latest_record = Attendance.query.filter(Attendance.employee_id == employee.employee_id).order_by(Attendance.timestamp.desc()).first()
+
+    # Determine the current status (clocked in or out)
+    if latest_record:
+        if latest_record.clocked_in == 1:
+            current_status = "clocked_in"
+        else:
+            current_status = "clocked_out"
+    else:
+        current_status = "not_clocked_in"  # No records found for the employee
+
+    return jsonify({
+        "attendance_records": [
+            {
+                "attendance_id": rec.attendance_id,
+                "timestamp": rec.timestamp.isoformat(),
+                "clocked_in": rec.clocked_in
+            } for rec in records
+        ],
+        "current_status": current_status
+    })
+
+
     
 # Admin: Update an employee's clock-in status and timestamp
 @attendance_bp.route("/<int:attendance_id>", methods=["PUT"])
