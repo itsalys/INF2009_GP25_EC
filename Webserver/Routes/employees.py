@@ -64,6 +64,11 @@ def employee_profile_page(employee_id):
     
     return render_template("employee_profile.html", employee=employee, role="admin")
 
+@employees_bp.route("/myprofile", methods=["GET"])
+def employee_view_profile_page():
+    return render_template("employee_view_profile.html", role="employee")
+        
+
 # Employee/Admin: Get employee by ID
 @employees_bp.route("/<int:employee_id>", methods=["GET"])
 def get_employee(employee_id):

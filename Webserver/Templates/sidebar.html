@@ -9,8 +9,6 @@
             <ul class="navbar-nav" id="navMenu">
 
                 {% if role %}
-
-
                     {% if role == 'admin' %}
                     <li class="nav-item dropdown">
                         <li class="nav-item">
@@ -25,9 +23,13 @@
                         </ul>
                     </li>
                     {% endif %}
+
                     {% if role == 'employee' %}
                     <li class="nav-item">
-                        <a class="nav-link" href="#">Profile</a>
+                        <a class="nav-link" href="{{ url_for('attendance.employee_dashboard_page') }}">Dashboard</a>                    
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('employees.employee_view_profile_page') }}">Profile</a>                    
                     </li>
                     {% endif %}
                     <li class="nav-item" id="logoutNav">
@@ -43,15 +45,18 @@
     document.addEventListener("DOMContentLoaded", function () {
         let token = localStorage.getItem("token");
 
+
         if (!token) {
             document.getElementById("logoutNav").style.display = "none"; // Hide logout if not logged in
         }
 
         function logout() {
+            const decodedToken = JSON.parse(atob(token.split('.')[1]));
+            const role = decodedToken.role;
+
             console.log("Logging out...");
             localStorage.removeItem("token");
-            let role = localStorage.getItem("role"); // Store role in localStorage upon login
-            if (role === "admin") {
+            if (role == "admin") {
                 window.location.href = "/auth/admin/login";  // Redirect to admin login
             } else {
                 window.location.href = "/auth/employee/login";  // Redirect to employee login
