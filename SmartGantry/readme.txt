@@ -4,6 +4,7 @@ MTD1: Automated Set Up
 
 1. Run setup.sh 
 
+chmod +x setup.sh
 ./setup.sh
 
 MTD2: Manual Set Up

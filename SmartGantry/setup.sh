@@ -1,22 +1,32 @@
 #!/bin/bash
 
-echo "🚀 Setting up the SmartGantry virtual environment..."
+# Define the virtual environment name
+VENV_NAME="smartgantry"
 
-# Step 1: Create virtual environment
-python3 -m venv smartgantry
-echo "✅ Virtual environment 'smartgantry' created."
-
-# Step 2: Activate virtual environment
-source smartgantry/bin/activate
-echo "✅ Virtual environment activated."
-
-# Step 3: Install dependencies
-echo "🔧 Installing dependencies..."
+echo "Updating package list..."
 sudo apt update
-sudo apt install -y portaudio19-dev cmake
-pip install --upgrade pip
-pip install -r requirements.txt
-echo "✅ Dependencies installed."
 
-# Step 4: Start the application
-echo "🚀 Set up completed !"
+echo "Installing system dependencies..."
+sudo apt install -y portaudio19-dev cmake python3-venv python3-pip
+
+# Create and activate virtual environment
+echo "Creating virtual environment: $VENV_NAME"
+python3 -m venv $VENV_NAME
+
+echo "Activating virtual environment..."
+source $VENV_NAME/bin/activate
+
+# Ensure pip is up to date
+echo "Upgrading pip..."
+pip install --upgrade pip
+
+# Check if requirements.txt exists before installing
+if [ -f "requirements.txt" ]; then
+    echo "Installing Python dependencies from requirements.txt..."
+    pip install -r requirements.txt
+else
+    echo "Error: requirements.txt file not found!"
+    exit 1
+fi
+
+echo "Setup completed successfully!"
