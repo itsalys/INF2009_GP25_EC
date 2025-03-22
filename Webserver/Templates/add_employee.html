@@ -31,7 +31,7 @@
 
         <div class="mb-3">
             <label for="profile_pic" class="form-label">Profile Picture</label>
-            <input type="file" class="form-control" id="profile_pic" name="profile_pic" accept=".png, .jpg, .jpeg, .gif" required>
+            <input type="file" class="form-control" id="profile_pic" name="profile_pic" accept=".png, .jpg, .jpeg, .gif, image/png, image/jpeg, image/jpg, image/gif" required>
             <div class="invalid-feedback">Please upload a valid image (PNG, JPG, JPEG, GIF).</div>
         </div>
 
@@ -137,7 +137,9 @@ document.addEventListener("DOMContentLoaded", function () {
         } else {
             let file = profilePic.files[0];
             let allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/gif"];
-            if (!allowedTypes.includes(file.type)) {
+            let allowedExtensions = [".png", ".jpg", ".jpeg", ".gif"];
+            const maxSizeMB = 10;
+            if (!allowedTypes.includes(file.type) || file.size > maxSizeMB * 1024 * 1024) {
                 profilePic.classList.add("is-invalid");
                 isValid = false;
             } else {
