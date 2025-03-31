@@ -32,7 +32,7 @@ Running this as a separate service keeps administrative tasks isolated from the 
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/itsalys/INF2009_GP25_EC.git
 cd smartgantry
 ```
 
@@ -56,11 +56,11 @@ python3 -m venv smartgantry
 
 ```bash
 sudo apt update
-sudo apt install -y portaudio19-dev cmake python3-tk
+sudo apt install -y portaudio19-dev cmake
 pip install -r requirements.txt
 ```
 
-> Note: `portaudio19-dev` is required for microphone support. `cmake` is needed for some compiled packages like dlib. `python3-tk` installs Tkinter for GUI display control.
+> Note: `portaudio19-dev` is required for microphone support. `cmake` is needed for some compiled packages like dlib. 
 
 ### 4. Start the Main Application
 
