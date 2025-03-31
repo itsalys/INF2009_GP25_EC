@@ -1,0 +1,16 @@
+# /etc/systemd/system/webserver.service
+[Unit]
+Description=Flask Webserver for Smart Gantry
+After=network.target
+
+[Service]
+User=dev
+Group=dev
+WorkingDirectory=/home/dev/EC_Test/Webserver
+ExecStart=/home/dev/webserver/bin/python /home/dev/EC_Test/Webserver/app.py
+Restart=always
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

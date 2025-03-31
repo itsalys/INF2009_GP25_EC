@@ -1,0 +1,17 @@
+# /etc/systemd/system/attendance-handler.service
+[Unit]
+Description=MQTT Attendance Handler for Smart Gantry
+After=network.target
+
+[Service]
+User=dev
+Group=dev
+WorkingDirectory=/home/dev/EC_Test/Webserver
+ExecStart=/home/dev/webserver/bin/python /home/dev/EC_Test/Webserver/attendance_handler.py
+Restart=always
+StandardOutput=journal
+StandardError=journal
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

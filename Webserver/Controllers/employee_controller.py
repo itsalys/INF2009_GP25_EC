@@ -2,6 +2,7 @@ import bcrypt
 from Models.employee import Employee
 from Models import db
 import base64
+from Controllers.mqtt_controller import publish_new_employee
 
 # Function to update an employee's profile picture
 def update_employee_profile_picture(employee_id, file):
@@ -43,7 +44,7 @@ def get_employee_by_id(employee_id):
     }, None
 
 def add_employee(data):
-    """Add a new employee with hashed password."""
+    """Add a new employee with hashed password and send MQTT."""
     hashed_password = bcrypt.hashpw(data["password"].encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
     new_employee = Employee(
@@ -56,7 +57,12 @@ def add_employee(data):
 
     db.session.add(new_employee)
     db.session.commit()
+
+    # Publish to MQTT after successful commit
+    publish_new_employee(new_employee)
+
     return "Employee added successfully", None
+
 
 def update_employee(employee_id, data):
     """Update employee details."""
