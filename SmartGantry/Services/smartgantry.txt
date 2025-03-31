@@ -1,0 +1,22 @@
+# /etc/systemd/system/smartgantry.service
+[Unit]
+Description=Run smart gantry main.py Python Script in Virtual Environment
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/EC_Test/SmartGantry
+ExecStart=/home/pi/face_rec/bin/python /home/pi/EC_Test/SmartGantry/main.py
+Restart=always
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+User=pi
+Group=pi
+StandardOutput=journal
+StandardError=journal
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+PermissionsStartOnly=true
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_DAC_OVERRIDE CAP_SYS_RAWIO
+
+[Install]
+WantedBy=multi-user.target

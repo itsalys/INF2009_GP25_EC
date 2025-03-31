@@ -1,7 +1,9 @@
+paho-mqtt
+tkinter
 screeninfo
 speechrecognition
 pyaudio
 imutils
 opencv-python
-# face-recognition
-# facedb
+face-recognition
+facedb

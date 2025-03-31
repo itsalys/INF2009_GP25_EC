@@ -1,0 +1,15 @@
+# /etc/systemd/system/app_handler.service
+[Unit]
+Description=Run app_handler Python Script in Virtual Environment
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/EC_Test/SmartGantry
+ExecStart=/home/pi/face_rec/bin/python /home/pi/EC_Test/SmartGantry/app_handler.py
+Restart=always
+User=pi
+Group=pi
+
+[Install]
+WantedBy=multi-user.target
