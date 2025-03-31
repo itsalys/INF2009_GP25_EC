@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Device Management{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Device Management</h2>
+
+    <button class="btn btn-primary my-3" id="scanDevicesBtn">Scan for Devices</button>
+
+    <div id="deviceTableContainer" class="table-responsive">
+        <table class="table table-bordered" id="deviceTable">
+            <thead>
+                <tr>
+                    <th>Hostname</th>
+                    <th>IP Address</th>
+                    <th>Mode</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="deviceTableBody">
+                <!-- Rows will be populated via JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <div id="deviceStatusMessage" class="alert mt-3" style="display: none;"></div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const scanBtn = document.getElementById("scanDevicesBtn");
+        const tableBody = document.getElementById("deviceTableBody");
+        const statusMsg = document.getElementById("deviceStatusMessage");
+
+        function updateStatus(message, type = "success") {
+            statusMsg.className = "alert alert-" + type;
+            statusMsg.innerText = message;
+            statusMsg.style.display = "block";
+        }
+
+        function renderTable(devices) {
+            tableBody.innerHTML = "";
+            devices.forEach(device => {
+                const row = document.createElement("tr");
+
+                row.innerHTML = `
+                    <td>${device.hostname}</td>
+                    <td>${device.ip}</td>
+                    <td>
+                        <span class="mode-display">${device.mode}</span>
+                        <select class="form-select mode-edit" style="display:none">
+                            <option value="entry" ${device.mode === "entry" ? "selected" : ""}>entry</option>
+                            <option value="exit" ${device.mode === "exit" ? "selected" : ""}>exit</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary edit-btn">Edit</button>
+                        <button class="btn btn-sm btn-success save-btn" style="display:none">Save</button>
+                    </td>
+                `;
+
+                const editBtn = row.querySelector(".edit-btn");
+                const saveBtn = row.querySelector(".save-btn");
+                const modeDisplay = row.querySelector(".mode-display");
+                const modeSelect = row.querySelector(".mode-edit");
+
+                editBtn.addEventListener("click", () => {
+                    modeDisplay.style.display = "none";
+                    modeSelect.style.display = "block";
+                    editBtn.style.display = "none";
+                    saveBtn.style.display = "inline-block";
+                });
+
+                saveBtn.addEventListener("click", () => {
+                    const newMode = modeSelect.value;
+                    const hostname = device.hostname;
+                    const currentMode = device.mode;
+
+                    if (newMode === currentMode) {
+                        updateStatus("No changes made.", "info");
+                        modeDisplay.style.display = "inline";
+                        modeSelect.style.display = "none";
+                        editBtn.style.display = "inline-block";
+                        saveBtn.style.display = "none";
+                        return;
+                    }
+
+                    updateStatus("Updating " + hostname + "...", "info");
+
+                    fetch(`/devices/update_mode/${hostname}`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ mode: newMode })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateStatus("Mode updated successfully.", "success");
+                            modeDisplay.textContent = newMode;
+                            device.mode = newMode;
+                        } else {
+                            updateStatus("Failed to update mode: " + data.error, "danger");
+                        }
+                        modeDisplay.style.display = "inline";
+                        modeSelect.style.display = "none";
+                        editBtn.style.display = "inline-block";
+                        saveBtn.style.display = "none";
+                    })
+                    .catch(() => {
+                        updateStatus("Error updating device.", "danger");
+                        modeDisplay.style.display = "inline";
+                        modeSelect.style.display = "none";
+                        editBtn.style.display = "inline-block";
+                        saveBtn.style.display = "none";
+                    });
+                });
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        function scanForDevices() {
+            updateStatus("Scanning for devices...", "info");
+
+            fetch("/devices/scan")
+                .then(res => res.json())
+                .then(data => {
+                    if (data.devices && data.devices.length > 0) {
+                        renderTable(data.devices);
+                        updateStatus("Devices loaded.", "success");
+                    } else {
+                        updateStatus("No devices found.", "warning");
+                    }
+                })
+                .catch(() => {
+                    updateStatus("Failed to scan for devices.", "danger");
+                });
+        }
+
+        // Auto scan when page loads
+        scanForDevices();
+
+        scanBtn.addEventListener("click", scanForDevices);
+    });
+</script>
+{% endblock %}
